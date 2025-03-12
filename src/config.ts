@@ -2,9 +2,9 @@ import mysql from "mysql2";
 
 const db = mysql.createConnection({
   host: "localhost",
-  user: "root", // Substitua pelo seu usuário do MySQL
-  password: "senha", // Substitua pela sua senha
-  database: "nome_do_banco", // Substitua pelo nome do seu banco
+  user: "root",
+  password: "senha",
+  database: "nome_do_banco",
 });
 
 db.connect((err) => {

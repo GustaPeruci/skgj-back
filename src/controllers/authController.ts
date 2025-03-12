@@ -4,7 +4,6 @@ import pool from "../config/database";
 import { generateSession, validateSession, invalidateSession } from "../config/sessionManager";
 import { encryptData } from "../utils/cryptoUtils";
 
-// Função de criação da sessão
 export async function createSession(req: Request, res: Response): Promise<void> {
   try {
     const { username, password } = req.body;
@@ -26,14 +25,13 @@ export async function createSession(req: Request, res: Response): Promise<void> 
     }
 
     const { sessionId, keyPairs, encryptedPairs } = await generateSession(rows[0].id); 
-    res.json({ sessionId, keyPairs, encryptedPairs }); // Enviando apenas o hash dos keyPairs, não os pares
+    res.json({ sessionId, keyPairs, encryptedPairs });
   } catch (error) {
     console.error("Erro ao criar sessão:", error);
     res.status(500).json({ message: "Erro interno do servidor" });
   }
 }
 
-// Função para validar a senha (ou qualquer dado enviado após a sessão ser criada)
 export async function validatePassword(req: Request, res: Response): Promise<void> {
   try {
     const { inputValue, sessionId, encryptedPairs, username } = req.body;
@@ -43,7 +41,7 @@ export async function validatePassword(req: Request, res: Response): Promise<voi
       return;
     }
 
-    await invalidateSession(sessionId); // Invalida a sessão após o uso
+    await invalidateSession(sessionId);
     res.status(200).json({ message: "Senha válida." });
   } catch (error) {
     console.error("Erro ao validar senha:", error);
@@ -51,7 +49,6 @@ export async function validatePassword(req: Request, res: Response): Promise<voi
   }
 }
 
-// Função de registro de usuário
 export async function register(req: Request, res: Response): Promise<void> {
   try {
     const { username, password } = req.body;
@@ -64,18 +61,15 @@ export async function register(req: Request, res: Response): Promise<void> {
   }
 }
 
-// Função de login
 export async function login(req: Request, res: Response): Promise<void> {
   try {
     const { username, password } = req.body;
 
-    // Busca pelo usuário no banco de dados
     const [rows]: any = await pool.execute(
       "SELECT id, password_hash FROM users WHERE username = ?",
       [username]
     );
 
-    // Verifica se o usuário existe e a senha está correta
     if (rows.length === 0 || !rows[0].password_hash) {
       res.status(401).json({ message: "Credenciais inválidas" });
       return;
@@ -87,10 +81,8 @@ export async function login(req: Request, res: Response): Promise<void> {
       return;
     }
 
-    // Gera a sessão para o usuário após login bem-sucedido
     const { sessionId, keyPairs, encryptedPairs } = await generateSession(rows[0].id);
 
-    // Envia a resposta com sessionId e keyPairs
     res.json({
       message: "Login bem-sucedido",
       sessionId,

@@ -8,22 +8,18 @@ interface KeyPair {
   key2: string;
 }
 
-// Geração de uma nova sessão
 export async function generateSession(userId: number): Promise<{ sessionId: string; keyPairs: string, encryptedPairs: string }> {
   try {
     const sessionId = crypto.randomBytes(16).toString("hex");
 
-    // Gerando os pares de teclas de forma aleatória
     const digits = ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"];
 
-    // Embaralha os dígitos
     const shuffledDigits = digits.sort(() => Math.random() - 0.5);
 
-    // Cria pares aleatórios
     const keyPairs = JSON.stringify(
       Array.from({ length: 5 }, (_, i) =>
-        shuffledDigits.splice(0, 2) // Pega e remove dois elementos aleatórios
-      ).sort(() => Math.random() - 0.5) // Embaralha a ordem dos pares
+        shuffledDigits.splice(0, 2)
+      ).sort(() => Math.random() - 0.5)
     );
 
     if (!sessionId || !keyPairs) {
@@ -35,7 +31,6 @@ export async function generateSession(userId: number): Promise<{ sessionId: stri
       throw new Error("Falha ao criptografar os pares de teclas.");
     }
 
-    // Armazenando a sessão no banco de dados
     await pool.execute(
       "INSERT INTO sessions (session_id, user_id, key_pairs, active) VALUES (?, ?, ?, TRUE)",
       [sessionId, userId, encryptedPairs]
@@ -44,11 +39,10 @@ export async function generateSession(userId: number): Promise<{ sessionId: stri
     return { sessionId, keyPairs, encryptedPairs };
   } catch (error) {
     console.error("Erro ao criar sessão:", error);
-    throw error; // Re-throw the error after logging it
+    throw error;
   }
 }
 
-// Validação da sessão
 export async function validateSession(sessionId: string, encryptedPairs: string, password: string, username: string): Promise<boolean> {
   const [rowsSessions]: any = await pool.execute("SELECT * FROM sessions WHERE session_id = ?", [sessionId]);
 
@@ -73,18 +67,10 @@ export async function validateSession(sessionId: string, encryptedPairs: string,
     return false;
   }
 
-  // Gerar todas as combinações possíveis com base no teclado
   const keyPairs = JSON.parse(decryptedPairs);
-  const splitPassword = password.split("");
 
-  // Criar todas as combinações possíveis de senhas a partir dos pares
-  console.log(keyPairs)
-  console.log(splitPassword)
   const generatedPasswords = generatePossiblePasswords(keyPairs, password);
   
-  console.log(generatedPasswords);  // Para fins de debug, você pode remover isso depois
-
-  // Verificar se a senha fornecida está nas combinações geradas
   if (!generatedPasswords.includes(password)) {
     console.log("Senha não corresponde aos pares de chave.");
     return false;
@@ -99,19 +85,12 @@ export async function validateSession(sessionId: string, encryptedPairs: string,
     }
   }
 
-  // const passwordMatch = await bcrypt.compare(password, rowsUsers[0].password_hash);
-
-  // if (!passwordMatch) return false;
-
-  // Marca a sessão como inválida (inativa) após o primeiro uso
   await pool.execute("UPDATE sessions SET active = FALSE WHERE session_id = ?", [sessionId]);
 
   return true;
 }
 
-// Função para gerar todas as combinações possíveis de senha a partir dos pares de chave
 function generatePossiblePasswords(keyPairs: string[][], password: string): string[] {
-  // Criar um mapa para facilitar a busca dos pares
   const keyMap: { [key: string]: string } = {};
 
   for (const pair of keyPairs) {
@@ -119,22 +98,19 @@ function generatePossiblePasswords(keyPairs: string[][], password: string): stri
     keyMap[pair[1]] = pair[0];
   }
 
-  // Criar um array de opções para cada dígito da senha
   let possibleCharsArray: string[][] = [];
 
   for (const char of password) {
     if (keyMap[char]) {
       possibleCharsArray.push([char, keyMap[char]]);
     } else {
-      possibleCharsArray.push([char]); // Se o caractere não tem substituto, mantém ele mesmo
+      possibleCharsArray.push([char]);
     }
   }
 
-  // Gerar todas as combinações possíveis
   return generateCombinations(possibleCharsArray);
 }
 
-// Função para gerar todas as combinações possíveis de um array de arrays
 function generateCombinations(arrays: string[][]): string[] {
   let results: string[] = [""];
 
@@ -153,7 +129,6 @@ function generateCombinations(arrays: string[][]): string[] {
 
 
 
-// Invalidação da sessão (utilizada após validar a senha)
 export async function invalidateSession(sessionId: string): Promise<void> {
   try {
     await pool.execute("UPDATE sessions SET active = FALSE WHERE session_id = ?", [sessionId]);
@@ -172,11 +147,10 @@ export async function getKeyPairs(sessionId: string): Promise<string[]> {
   const decryptedPairs = decryptData(rows[0].key_pairs);
 
   try {
-    // Tenta fazer o parse da string descriptografada
     const keyPairs = JSON.parse(decryptedPairs);
 
     if (Array.isArray(keyPairs)) {
-      return keyPairs; // Retorna como array se for válido
+      return keyPairs;
     } else {
       throw new Error("Pares de teclas não são um array válido.");
     }
